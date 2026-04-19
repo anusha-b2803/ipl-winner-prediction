@@ -846,15 +846,14 @@ export default function Home() {
                         >
                           <div className="flex items-center gap-4">
                             <span className="text-2xl font-black text-white/10 stat-num w-12">{s.year}</span>
-                            <div className="flex flex-col">
-                              <span className="text-sm font-bold text-white/90">{s.winner}</span>
-                              {s.momentum && <MomentumPill sequence={s.momentum as any} />}
-                            </div>
                             <div className="flex items-center gap-3">
                               {s.winner && <TeamAvatar team={s.winner} size="sm" />}
-                              <span className={`font-bold ${isSelected ? "text-white" : "text-white/70"}`}>
-                                {s.winner || "TBD"}
-                              </span>
+                              <div className="flex flex-col">
+                                <span className={`font-bold ${isSelected ? "text-white" : "text-white/80"}`}>
+                                  {s.winner || "TBD"}
+                                </span>
+                                {s.momentum && <MomentumPill sequence={s.momentum as any} />}
+                              </div>
                             </div>
                           </div>
                           {isSelected
