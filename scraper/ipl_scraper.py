@@ -5,6 +5,7 @@ Run: python scraper/ipl_scraper.py --years 2023 2024
 """
 
 import asyncio
+import os
 import json
 import re
 import time
@@ -106,10 +107,16 @@ class PlayerSeasonStats:
 
 
 async def fetch(client: httpx.AsyncClient, url: str, retries: int = 3) -> Optional[str]:
+    scraper_key = os.getenv("SCRAPER_API_KEY")
+    target_url = url
+    if scraper_key:
+        import urllib.parse
+        target_url = f"http://api.scraperapi.com?api_key={scraper_key}&url={urllib.parse.quote(url)}"
+
     for attempt in range(retries):
         try:
             await asyncio.sleep(1.5 + attempt)
-            r = await client.get(url, headers=HEADERS, timeout=30)
+            r = await client.get(target_url, headers=HEADERS, timeout=45)
             r.raise_for_status()
             return r.text
         except Exception as e:
