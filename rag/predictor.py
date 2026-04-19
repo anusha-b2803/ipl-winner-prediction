@@ -45,7 +45,7 @@ HF_MODEL = os.getenv("HF_MODEL", "meta-llama/Llama-3.1-70B-Instruct")
 
 # Initialize HF Client
 HUGGINGFACE_API_KEY = os.getenv("HUGGINGFACE_API_KEY") # Refresh from env
-hf_client = InferenceClient(api_key=HUGGINGFACE_API_KEY) if HUGGINGFACE_API_KEY else InferenceClient()
+hf_client = InferenceClient(token=HUGGINGFACE_API_KEY) if HUGGINGFACE_API_KEY else InferenceClient()
 
 
 @dataclass

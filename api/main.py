@@ -431,4 +431,5 @@ if __name__ == "__main__":
     print(f"\n[API] Starting IPL Prophet API (Zero-Infra Mode)")
     print(f"[*] DB: {SQLITE_DB_PATH}")
     print(f"[*] Vectors: {QDRANT_PATH}")
-    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
+    port = int(os.environ.get("PORT", 8000))
+    uvicorn.run("main:app", host="0.0.0.0", port=port)
