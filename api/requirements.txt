@@ -10,3 +10,8 @@ python-dotenv==1.0.1
 pydantic==2.7.1
 pandas==2.2.2
 lxml==5.2.2
+fastembed==0.2.7
+huggingface-hub==0.23.0
+torch --index-url https://download.pytorch.org/whl/cpu
+playwright==1.44.0
+python-multipart==0.0.9
