@@ -37,7 +37,7 @@ const fadeUp = {
   initial: { opacity: 0, y: 24 },
   animate: { opacity: 1, y: 0 },
   exit:    { opacity: 0, y: -16 },
-  transition: { duration: 0.45, ease: [0.4, 0, 0.2, 1] },
+  transition: { duration: 0.45, ease: [0.4, 0, 0.2, 1] as const },
 };
 const stagger = { animate: { transition: { staggerChildren: 0.08 } } };
 const fadeItem = {
@@ -288,7 +288,7 @@ export default function Home() {
   };
 
   const years = seasons.length > 0
-    ? [...new Set(seasons.map(s => s.year))].sort((a, b) => b - a)
+    ? Array.from(new Set(seasons.map(s => s.year))).sort((a, b) => b - a)
     : [2026, 2025, 2024];
 
   const currentYear = new Date().getFullYear();

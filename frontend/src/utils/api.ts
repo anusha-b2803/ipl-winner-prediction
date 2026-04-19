@@ -17,7 +17,7 @@ export interface PredictionResult {
   predicted_winner: string;
   confidence: number;
   reasoning: string;
-  top_teams: { team: string; probability: number; reasoning: string }[];
+  top_teams: { team: string; probability: number; reasoning: string; momentum?: string[] }[];
   key_factors: string[];
   historical_context: string;
   retrieved_chunks: number;
@@ -48,6 +48,7 @@ export interface Season {
   year: number;
   winner: string;
   teams: number;
+  momentum?: string[];
 }
 
 export interface TitleCount {
