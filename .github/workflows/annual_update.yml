@@ -1,0 +1,138 @@
+name: Annual IPL Data Update
+
+on:
+  # Runs every year on March 22 (IPL usually starts mid-March)
+  schedule:
+    - cron: "0 6 22 3 *"
+
+  # Allow manual trigger from GitHub UI
+  workflow_dispatch:
+    inputs:
+      years:
+        description: "Years to scrape (space-separated, e.g. 2024 2025)"
+        required: false
+        default: "2025"
+      force_rescrape:
+        description: "Force re-scrape even if data exists"
+        type: boolean
+        default: false
+
+jobs:
+  scrape-and-ingest:
+    name: Scrape → Embed → Ingest
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_DB: ipl_stats
+          POSTGRES_USER: ipl_user
+          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: |
+          pip install -r scraper/requirements.txt
+          pip install -r api/requirements.txt
+          playwright install chromium
+
+      - name: Determine years to scrape
+        id: years
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            YEARS="${{ github.event.inputs.years }}"
+          else
+            # Auto-detect: current year
+            YEARS=$(date +%Y)
+          fi
+          echo "years=$YEARS" >> $GITHUB_OUTPUT
+          echo "Scraping years: $YEARS"
+
+      - name: Run scraper
+        env:
+          FORCE: ${{ github.event.inputs.force_rescrape == 'true' && '--force' || '' }}
+        run: |
+          python scraper/ipl_scraper.py --years ${{ steps.years.outputs.years }} $FORCE
+
+      - name: Run ingestion pipeline
+        env:
+          POSTGRES_URL: postgresql://ipl_user:${{ secrets.POSTGRES_PASSWORD }}@localhost:5432/ipl_stats
+          QDRANT_URL: ${{ secrets.QDRANT_URL }}
+          QDRANT_API_KEY: ${{ secrets.QDRANT_API_KEY }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        run: |
+          python pipeline/ingest.py --years ${{ steps.years.outputs.years }}
+
+      - name: Upload raw data artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ipl-raw-data-${{ steps.years.outputs.years }}
+          path: data/raw/
+          retention-days: 365
+
+      - name: Notify on success
+        if: success()
+        run: |
+          echo "✅ IPL data pipeline completed for years: ${{ steps.years.outputs.years }}"
+
+      - name: Notify on failure
+        if: failure()
+        run: |
+          echo "❌ Pipeline failed. Check logs above."
+
+  deploy:
+    name: Deploy updated API
+    runs-on: ubuntu-latest
+    needs: scrape-and-ingest
+    if: success()
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Deploy to Railway
+        if: ${{ secrets.RAILWAY_TOKEN != '' }}
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+        run: |
+          npm install -g @railway/cli
+          railway up --service ipl-api
+
+      - name: Deploy to Render (fallback)
+        if: ${{ secrets.RENDER_DEPLOY_HOOK != '' }}
+        run: |
+          curl -X POST "${{ secrets.RENDER_DEPLOY_HOOK }}"
+
+      - name: Invalidate prediction cache
+        if: ${{ secrets.API_ADMIN_SECRET != '' }}
+        run: |
+          YEARS="${{ needs.scrape-and-ingest.outputs.years }}"
+          for YEAR in $YEARS; do
+            curl -X GET "${{ secrets.API_URL }}/predict/${YEAR}?force_refresh=true" \
+              -H "X-Admin-Secret: ${{ secrets.API_ADMIN_SECRET }}" || true
+          done
+
+      - name: Summary
+        run: |
+          echo "## 🏏 IPL Annual Update Complete" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **Years updated:** ${{ needs.scrape-and-ingest.outputs.years }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Deployed:** $(date -u)" >> $GITHUB_STEP_SUMMARY

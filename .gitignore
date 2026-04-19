@@ -1,0 +1,38 @@
+# Python
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+dist/
+build/
+
+# Environment
+.env
+*.env.local
+
+# Data (live databases and raw downloads)
+data/
+*.lock
+
+# Node
+frontend/node_modules/
+frontend/.next/
+frontend/out/
+
+# Docker volumes
+postgres_data/
+qdrant_data/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
