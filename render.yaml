@@ -1,0 +1,46 @@
+services:
+  # API Backend (FastAPI)
+  - type: web
+    name: ipl-prophet-api
+    env: python
+    buildCommand: pip install -r api/requirements.txt
+    startCommand: python api/main.py
+    healthCheckPath: /health
+    disk:
+      name: ipl-data
+      mountPath: /app/data
+      sizeGB: 1
+    envVars:
+      - key: PORT
+        value: 8000
+      - key: PYTHON_VERSION
+        value: 3.12.5
+      - key: SQLITE_DB_PATH
+        value: /app/data/ipl_stats.db
+      - key: QDRANT_PATH
+        value: /app/data/vector_db_v3
+      - key: GOOGLE_API_KEY
+        sync: false
+      - key: HUGGINGFACE_API_KEY
+        sync: false
+      - key: SCRAPER_API_KEY
+        sync: false
+      - key: ADMIN_SECRET
+        sync: false
+      - key: SCRAPE_YEARS
+        value: 2008-2026
+
+  # Frontend (Next.js)
+  - type: web
+    name: ipl-prophet-frontend
+    env: node
+    buildCommand: cd frontend && npm install && npm run build
+    startCommand: cd frontend && npm run start
+    envVars:
+      - key: NODE_VERSION
+        value: 20.12.0
+      - key: NEXT_PUBLIC_API_URL
+        fromService:
+          name: ipl-prophet-api
+          type: web
+          property: host

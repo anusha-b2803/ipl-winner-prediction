@@ -41,11 +41,11 @@ EMBEDDING_DIM = 384  # Dimension for bge-small-en-v1.5
 TRANSFORMER_WEIGHTS_PATH = os.getenv("TRANSFORMER_WEIGHTS_PATH", "./models/weights.pt")
 
 # LLM Model used for predictions
-HF_MODEL = os.getenv("HF_MODEL", "meta-llama/Llama-3.1-70B-Instruct")
+HF_MODEL = os.getenv("HF_MODEL", "meta-llama/Llama-3.3-70B-Instruct")
 
 # Initialize HF Client
 HUGGINGFACE_API_KEY = os.getenv("HUGGINGFACE_API_KEY") # Refresh from env
-hf_client = InferenceClient(token=HUGGINGFACE_API_KEY) if HUGGINGFACE_API_KEY else InferenceClient()
+hf_client = InferenceClient(token=HUGGINGFACE_API_KEY, provider="auto") if HUGGINGFACE_API_KEY else InferenceClient(provider="auto")
 
 
 @dataclass
@@ -123,7 +123,14 @@ def get_qdrant() -> Optional[QdrantClient]:
         return _qdrant_client
 
     try:
-        if QDRANT_PATH and os.path.exists(QDRANT_PATH):
+        if QDRANT_PATH:
+            # Ensure the directory exists (but don't fail if it's just a file path)
+            try:
+                parent = os.path.dirname(QDRANT_PATH)
+                if parent:
+                    os.makedirs(parent, exist_ok=True)
+            except Exception:
+                pass
             _qdrant_client = QdrantClient(path=QDRANT_PATH)
         else:
             kwargs = {"url": QDRANT_URL}

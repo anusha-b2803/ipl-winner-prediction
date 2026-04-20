@@ -135,10 +135,22 @@ async def scrape_series_matches(client: httpx.AsyncClient, year: int) -> list[Ma
         log.warning(f"No series ID for year {year}")
         return []
 
-    url = f"https://www.espncricinfo.com/series/{series_id}/match-schedule-fixtures-and-results"
-    html = await fetch(client, url)
+    urls = [
+        f"https://www.espncricinfo.com/series/{series_id}/match-schedule-fixtures-and-results",
+        f"https://www.espncricinfo.com/series/{series_id}/match-results"
+    ]
+    
+    html = None
+    for url in urls:
+        html = await fetch(client, url)
+        if html:
+            break
+
     if not html:
-        return []
+        # If scraping fails, try to return fallback matches for this year
+        log.warning(f"Scraping matches failed for {year}, using fallback.")
+        fallback_matches, _ = generate_fallback_data(year)
+        return fallback_matches
 
     soup = BeautifulSoup(html, "html.parser")
     matches = []
@@ -219,7 +231,9 @@ async def scrape_points_table(client: httpx.AsyncClient, year: int) -> list[Team
     url = f"https://www.espncricinfo.com/series/{series_id}/points-table-standings"
     html = await fetch(client, url)
     if not html:
-        return []
+        log.warning(f"Scraping points table failed for {year}, using fallback.")
+        _, fallback_teams = generate_fallback_data(year)
+        return fallback_teams
 
     soup = BeautifulSoup(html, "html.parser")
     stats = []
@@ -280,7 +294,7 @@ def generate_fallback_data(year: int) -> tuple[list[MatchResult], list[TeamSeaso
 
     current_teams = teams_by_year.get(year, [
         "Mumbai Indians", "Chennai Super Kings", "Kolkata Knight Riders",
-        "Royal Challengers Bangalore", "Delhi Capitals", "Sunrisers Hyderabad",
+        "Royal Challengers Bengaluru", "Delhi Capitals", "Sunrisers Hyderabad",
         "Rajasthan Royals", "Punjab Kings", "Gujarat Titans", "Lucknow Super Giants"
     ])
 

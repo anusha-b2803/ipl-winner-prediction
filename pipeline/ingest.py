@@ -126,7 +126,12 @@ def get_qdrant(existing_client: Optional[QdrantClient] = None) -> QdrantClient:
         
     # Use local path if provided, otherwise fallback to URL
     if QDRANT_PATH:
-        os.makedirs(os.path.dirname(QDRANT_PATH), exist_ok=True)
+        try:
+            parent = os.path.dirname(QDRANT_PATH)
+            if parent:
+                os.makedirs(parent, exist_ok=True)
+        except Exception:
+            pass
         return QdrantClient(path=QDRANT_PATH)
     
     kwargs = {"url": QDRANT_URL}

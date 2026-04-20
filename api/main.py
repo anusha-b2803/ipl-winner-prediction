@@ -47,8 +47,21 @@ async def lifespan(app: FastAPI):
     os.makedirs(os.path.dirname(SQLITE_DB_PATH), exist_ok=True)
     log.info(f"Using SQLite database at {SQLITE_DB_PATH}")
     
-    # Start background sync
+    # ─── Environment Validation ───
+    required_keys = ["GOOGLE_API_KEY", "HUGGINGFACE_API_KEY", "SCRAPER_API_KEY"]
+    missing = [k for k in required_keys if not os.getenv(k)]
+    if missing:
+        log.warning(f"⚠️ Missing recommended API keys: {', '.join(missing)}")
+        log.warning("Some features (LLM, ScraperAPI) may be disabled or limited.")
+
+    # ─── Bootstrap & Sync ───
     import asyncio
+    from scripts.bootstrap_render import bootstrap
+    
+    # Run full bootstrap check in background
+    asyncio.create_task(bootstrap())
+    
+    # Periodic background sync (12h)
     asyncio.create_task(run_periodic_sync())
     
     yield

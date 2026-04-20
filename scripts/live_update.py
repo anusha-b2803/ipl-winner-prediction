@@ -11,7 +11,7 @@ from dataclasses import asdict
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 
 from scripts.import_history import extract_table_from_wiki, DB_PATH, RAW_DATA_DIR
-from scraper.ipl_scraper import scrape_series_matches, IPL_WINNERS
+from scraper.ipl_scraper import scrape_series_matches, scrape_points_table, IPL_WINNERS
 import httpx
 
 async def sync_live_data():
@@ -25,12 +25,18 @@ async def sync_live_data():
     
     async with httpx.AsyncClient(follow_redirects=True) as client:
         # 1. Scrape Standings
-        # Note: We use pandas-based wiki scraper, but we wrap it in a thread if needed
-        # since it's blocking. For now, running directly.
         df = extract_table_from_wiki(current_year)
         
         # 2. Scrape Match Results
         matches = await scrape_series_matches(client, current_year)
+        
+        # 3. Fallback for standings if Wikipedia fails
+        if df is None:
+            log.warning(f"Wikipedia standings failed for {current_year}, trying ESPN Cricinfo...")
+            teams = await scrape_points_table(client, current_year)
+            if teams:
+                import pandas as pd
+                df = pd.DataFrame([asdict(t) for t in teams])
         
     if df is not None:
         # Save combined data to JSON

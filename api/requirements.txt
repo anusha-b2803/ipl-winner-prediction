@@ -11,7 +11,7 @@ pydantic==2.7.1
 pandas==2.2.2
 lxml==5.2.2
 fastembed
-huggingface-hub<0.21
+huggingface-hub>=0.34.6
 torch --index-url https://download.pytorch.org/whl/cpu
 playwright==1.44.0
 python-multipart==0.0.9
