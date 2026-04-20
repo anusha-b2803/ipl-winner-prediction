@@ -4,6 +4,7 @@ import subprocess
 import logging
 import sys
 import gc
+import asyncio
 from pathlib import Path
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")

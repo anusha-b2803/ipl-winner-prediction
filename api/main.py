@@ -10,6 +10,8 @@ from contextlib import asynccontextmanager
 from typing import Optional
 
 import aiosqlite
+import asyncio
+import gc
 from fastapi import FastAPI, HTTPException, Query, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
