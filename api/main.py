@@ -120,15 +120,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-@app.get("/")
-async def root():
-    """Root endpoint for health checks and service confirmation."""
-    return {
-        "status": "online",
-        "service": "IPL Winner Prediction API",
-        "version": "1.0.0",
-        "docs": "/docs"
-    }
+@app.get("/health")
+async def health_check():
+    """Health check for Render."""
+    return {"status": "ok", "timestamp": datetime.datetime.now().isoformat()}
 
 @app.get("/stats/sync-status")
 async def get_sync_status():
