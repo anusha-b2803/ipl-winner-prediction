@@ -10,7 +10,9 @@ import logging
 import asyncio
 import re
 from dataclasses import dataclass
-from typing import Optional
+import asyncio
+import gc
+from typing import Optional, List
 import datetime
 
 import aiosqlite
@@ -18,6 +20,7 @@ from huggingface_hub import InferenceClient
 import torch
 from qdrant_client import QdrantClient
 from qdrant_client.models import Filter, FieldCondition, MatchAny
+import google.generativeai as genai
 from dotenv import load_dotenv
 
 from fastembed import TextEmbedding
@@ -106,9 +109,24 @@ def get_embed_model():
     return _embed_model
 
 async def embed_query(text: str) -> list[float]:
-    """Get local embedding for a text via FastEmbed."""
+    """Get embedding for a text. Prefers Google API (Zero RAM) over local FastEmbed."""
+    api_key = os.getenv("GOOGLE_API_KEY")
+    
+    if api_key:
+        try:
+            # Use Google Generative AI for Zero-RAM embeddings
+            genai.configure(api_key=api_key)
+            result = genai.embed_content(
+                model="models/embedding-001",
+                content=text,
+                task_type="retrieval_query"
+            )
+            return result['embedding']
+        except Exception as e:
+            log.warning(f"Google Embedding API failed, falling back to local: {e}")
+
+    # Fallback to local FastEmbed (consumes ~150MB+ RAM)
     model = get_embed_model()
-    # model.embed returns a generator
     embeddings = list(model.embed([text]))
     return embeddings[0].tolist()
 

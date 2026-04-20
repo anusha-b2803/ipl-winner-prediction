@@ -54,13 +54,43 @@ def get_embed_model():
     return _embed_model
 
 async def get_embedding(text: str) -> list[float]:
-    """Get local embedding for a text."""
+    """Get embedding for a text. Prefers Google API (Zero RAM) over local FastEmbed."""
+    if GOOGLE_API_KEY:
+        try:
+            result = genai.embed_content(
+                model="models/embedding-001",
+                content=text,
+                task_type="retrieval_document"
+            )
+            return result['embedding']
+        except Exception as e:
+            log.warning(f"Google Embedding API failed, falling back to local: {e}")
+
+    # Fallback to local
     model = get_embed_model()
     embeddings = list(model.embed([text]))
     return embeddings[0].tolist()
 
 async def get_embeddings_batch(texts: list[str]) -> list[list[float]]:
-    """Batch embed texts locally (near-instant)."""
+    """Batch embed texts. Prefers Google API over local."""
+    if GOOGLE_API_KEY:
+        try:
+            # Google allows batches of up to 100
+            batch_size = 100
+            all_embeddings = []
+            for i in range(0, len(texts), batch_size):
+                batch = texts[i:i+batch_size]
+                result = genai.embed_content(
+                    model="models/embedding-001",
+                    content=batch,
+                    task_type="retrieval_document"
+                )
+                all_embeddings.extend(result['embedding'])
+            return all_embeddings
+        except Exception as e:
+            log.warning(f"Google Batch Embedding failed, falling back to local: {e}")
+
+    # Fallback to local
     model = get_embed_model()
     embeddings = list(model.embed(texts))
     return [e.tolist() for e in embeddings]

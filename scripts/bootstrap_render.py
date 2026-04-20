@@ -3,6 +3,7 @@ import sqlite3
 import subprocess
 import logging
 import sys
+import gc
 from pathlib import Path
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
@@ -49,16 +50,21 @@ async def bootstrap():
         # 1. Step 1: Import Season Stats from Wikipedia (Populates SQLite)
         log.info("Step 1/3: Importing season stats from Wikipedia...")
         await run_cmd([sys.executable, "scripts/import_history.py"])
+        gc.collect()
+        await asyncio.sleep(2)
 
         # 2. Step 2: Scrape Match Results (Populates data/raw/*.json)
         log.info("Step 2/3: Scraping match results for all years...")
         cmd_scrape = [sys.executable, "scraper/ipl_scraper.py", "--years"] + [str(y) for y in YEARS]
         await run_cmd(cmd_scrape)
+        gc.collect()
+        await asyncio.sleep(2)
 
         # 3. Step 3: Ingest Matches and Embeddings (Populates Qdrant + SQLite matches)
         log.info("Step 3/3: Ingesting into Vector DB and SQLite...")
         cmd_ingest = [sys.executable, "pipeline/ingest.py", "--years"] + [str(y) for y in YEARS]
         await run_cmd(cmd_ingest)
+        gc.collect()
 
         log.info("✅ FULL BOOTSTRAP COMPLETED SUCCESSFULLY!")
     except Exception as e:

@@ -57,12 +57,6 @@ async def lifespan(app: FastAPI):
     # ─── Bootstrap & Sync ───
     import asyncio
     from scripts.bootstrap_render import bootstrap
-    from rag.predictor import get_embed_model, load_transformer_weights
-    
-    # Pre-warm AI models during startup to prevent timeout on first request
-    log.info("Pre-warming AI models...")
-    get_embed_model()
-    load_transformer_weights()
     
     # Run full bootstrap check in background
     asyncio.create_task(bootstrap())
@@ -96,6 +90,10 @@ async def run_periodic_sync():
                 _sync_status["last_sync"] = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                 _sync_status["total_syncs"] += 1
             _sync_status["is_syncing"] = False
+            
+            # Explicitly clear memory after sync
+            import gc
+            gc.collect()
         except Exception as e:
             log.error(f"Background sync error: {e}")
             _sync_status["is_syncing"] = False
