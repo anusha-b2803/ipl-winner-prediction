@@ -14,6 +14,7 @@ import asyncio
 import gc
 from fastapi import FastAPI, HTTPException, Query, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from dotenv import load_dotenv
 import datetime
@@ -453,6 +454,15 @@ async def trigger_live_update(background_tasks: BackgroundTasks, secret: str = Q
     background_tasks.add_task(update_current_season)
     return {"message": f"Live update task queued for IPL {datetime.datetime.now().year}"}
 
+
+# Ensure the static directory exists before mounting to avoid startup errors.
+# We mount at the very end to ensure API routes take precedence.
+STATIC_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "static")
+if os.path.exists(STATIC_DIR):
+    log.info(f"Mounting frontend from {STATIC_DIR}")
+    app.mount("/", StaticFiles(directory=STATIC_DIR, html=True), name="frontend")
+else:
+    log.warning(f"Frontend static directory NOT FOUND at {STATIC_DIR}. UI will not be served.")
 
 if __name__ == "__main__":
     import uvicorn
