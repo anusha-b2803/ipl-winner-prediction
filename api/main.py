@@ -57,6 +57,12 @@ async def lifespan(app: FastAPI):
     # ─── Bootstrap & Sync ───
     import asyncio
     from scripts.bootstrap_render import bootstrap
+    from rag.predictor import get_embed_model, load_transformer_weights
+    
+    # Pre-warm AI models during startup to prevent timeout on first request
+    log.info("Pre-warming AI models...")
+    get_embed_model()
+    load_transformer_weights()
     
     # Run full bootstrap check in background
     asyncio.create_task(bootstrap())
@@ -112,6 +118,16 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+@app.get("/")
+async def root():
+    """Root endpoint for health checks and service confirmation."""
+    return {
+        "status": "online",
+        "service": "IPL Winner Prediction API",
+        "version": "1.0.0",
+        "docs": "/docs"
+    }
 
 @app.get("/stats/sync-status")
 async def get_sync_status():
